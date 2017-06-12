@@ -63,7 +63,7 @@ def for_me(condition, myself ):
 def authn_response(conf, return_addr, outstanding_queries=None,
                     log=None, timeslack=0, debug=0, asynchop=True,
                     allow_unsolicited=False):
-    sec = security_context(conf)
+    sec = security_context(conf, log=log)
     if not timeslack:
         try:
             timeslack = int(conf.accepted_time_diff)
@@ -78,7 +78,7 @@ def authn_response(conf, return_addr, outstanding_queries=None,
 # comes in over SOAP so synchronous
 def attribute_response(conf, return_addr, log=None, timeslack=0, debug=0,
                        asynchop=False, test=False):
-    sec = security_context(conf)
+    sec = security_context(conf, log=log)
     if not timeslack:
         try:
             timeslack = int(conf.accepted_time_diff)
@@ -216,7 +216,7 @@ class StatusResponse(object):
                                                         self.request_id))
             return None
 
-        assert self.response.version == "2.0"
+        assert self.response.version == "2.0", "Bad response version: %s" % self.response.version
         if self.response.destination and \
             self.response.destination != self.return_addr:
             if self.log:
@@ -224,8 +224,8 @@ class StatusResponse(object):
                                                 self.return_addr))
             return None
 
-        assert self.issue_instant_ok()
-        assert self.status_ok()
+        assert self.issue_instant_ok(), "failed issue_instant_ok"
+        assert self.status_ok(), "verification failed: status_ok"
         return self
 
     def loads(self, xmldata, decode=True, origxml=None):
@@ -587,7 +587,8 @@ class AuthnResponse(StatusResponse):
 
         try:
             self._verify()
-        except AssertionError:
+        except AssertionError as exc:
+            self.log.error("Failed verification: %r" % exc)
             return None
 
         if self.parse_assertion():
@@ -682,7 +683,8 @@ def response_factory(xmlstr, conf, return_addr=None,
                         outstanding_queries=None, log=None,
                         timeslack=0, debug=0, decode=True, request_id=0,
                         origxml=None, asynchop=True, allow_unsolicited=False):
-    sec_context = security_context(conf)
+    sec_context = security_context(conf, log=log)
+
     if not timeslack:
         try:
             timeslack = int(conf.accepted_time_diff)
