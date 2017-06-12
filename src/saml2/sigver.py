@@ -530,9 +530,6 @@ class SecurityContext(object):
         :param enctext: The encrypted text as a string
         :return: The decrypted text
         """
-
-        if self.log:
-            self.log.info("input len: %d" % len(enctext))
         _, fil = make_temp("%s" % enctext, decode=False)
         ntf = NamedTemporaryFile()
 
